@@ -52,9 +52,17 @@
     }
 
     /* Optional subtle visual when dragging files over the page */
-    .drag-over-page {
-      outline: 6px dashed rgba(0, 150, 255, 0.25);
-      outline-offset: -6px;
+    .drag-over-page::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border: 8px dashed rgba(48, 238, 0, 0.8);
+      background: rgba(20, 238, 0, 0.05);
+      z-index: 9999;
+      pointer-events: none;
     }
 
     /* Speed indicator overlay */
@@ -689,6 +697,7 @@
           <div><strong>Shift + ,</strong> - Decrease playback speed</div>
           <div><strong>Shift + .</strong> - Increase playback speed</div>
           <div><strong>Shift + , + .</strong> - Reset playback speed to 1x</div>
+          <div><strong>Shift + Scroll Wheel</strong> - Cycle through snapped frames</div>
         </div>
       </div>
     </div>
@@ -794,13 +803,6 @@
                 <option value="1m">1 minute</option>
               </select>
             </div>
-            <label class="mdc-text-field mdc-text-field--filled" id="snapdelay" >
-              <span class="mdc-text-field__ripple"></span>
-              <span class="mdc-floating-label" id="size-label">Snap delay</span>
-              <input id="snapd" type=number size="5" onchange="resize()" value="400" class="mdc-text-field__input"
-                type="text" placeholder="" aria-labelledby="size-label" >
-              <span class="mdc-line-ripple"></span>
-            </label>
           </div>
         </div>
         <div class="canvas-container">

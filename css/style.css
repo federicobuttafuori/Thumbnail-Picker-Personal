@@ -30,18 +30,14 @@ body {
     margin-left: auto;
   }
 
-  #videowidth, #snapdelay{
+  #videowidth{
     margin-bottom: 1rem;
     max-width: 84px;
     width: 22%;
     padding: 0 4px;
   }
-  #videowidth .mdc-floating-label,
-  #snapdelay .mdc-floating-label{
+  #videowidth .mdc-floating-label{
     left: 4px;
-  }
-  #snapdelay{
-    margin-left: 8px;
   }
 
   #videoInfo {
@@ -165,6 +161,17 @@ body {
     box-sizing: border-box;
     max-height: calc(100vh - 240px);
     overflow-y: auto;
+  }
+
+  #preview {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fff;
+    padding: 8px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
   }
   #videoControls > div{
     margin: 8px 0;

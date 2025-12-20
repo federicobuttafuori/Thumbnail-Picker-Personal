@@ -3,7 +3,6 @@ var canvas = document.querySelector("#canvas");
 var file = document.querySelector("#videofile");
 var videoControls = document.querySelector("#videoControls");
 var videow = document.querySelector("#videow");
-var snapd = document.querySelector("#snapd");
 var snap = document.querySelector("#snap");
 var snap2 = document.querySelector("#snap2");
 var save = document.querySelector("#save");
@@ -369,6 +368,77 @@ function selectImage(img) {
   clear.disabled = false;
 }
 
+function cycleThroughSnappedImages(direction) {
+  // direction: 1 for next, -1 for previous
+  const container = document.querySelector("#outputs");
+  if (!container) return;
+  
+  var images = container.querySelectorAll('.output-container > img');
+  if (images.length === 0) return;
+  
+  // Find currently selected image
+  var selectedImg = container.querySelector('.output-container > img.selected');
+  var currentIndex = -1;
+  
+  if (selectedImg) {
+    // Find index of selected image
+    for (let i = 0; i < images.length; i++) {
+      if (images[i] === selectedImg) {
+        currentIndex = i;
+        break;
+      }
+    }
+  }
+  
+  // Calculate next index (with wrapping)
+  var nextIndex;
+  if (currentIndex === -1) {
+    // No image selected, select first or last based on direction
+    nextIndex = direction > 0 ? 0 : images.length - 1;
+  } else {
+    nextIndex = currentIndex + direction;
+    // Wrap around
+    if (nextIndex < 0) {
+      nextIndex = images.length - 1;
+    } else if (nextIndex >= images.length) {
+      nextIndex = 0;
+    }
+  }
+  
+  var nextImg = images[nextIndex];
+  
+  // Select the next/previous image
+  selectImage(nextImg);
+  
+  // Seek video to the frame's time
+  var time = parseFloat(nextImg.getAttribute('data-time'));
+  if (!isNaN(time) && video) {
+    goToTime(video, time);
+  }
+  
+  // Optionally scroll the image into view
+  nextImg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function setupWheelNavigation() {
+  document.addEventListener('wheel', function(e) {
+    // Check if Shift key is pressed
+    if (e.shiftKey) {
+      // Prevent default scrolling behavior
+      e.preventDefault();
+      
+      // Check if we're not in an input/textarea
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : null;
+      const isEditable = tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable);
+      if (isEditable) return;
+      
+      // Determine scroll direction (deltaY > 0 means scrolling down, which should go to next)
+      var direction = e.deltaY > 0 ? 1 : -1;
+      cycleThroughSnappedImages(direction);
+    }
+  }, { passive: false });
+}
+
 function selectVideo() {
   file.click();
 }
@@ -467,4 +537,7 @@ window.addEventListener("load", function () {
       gtag("event", category + "-" + id, {});
     });
   }
+  
+  // Setup wheel navigation for cycling through snapped images
+  setupWheelNavigation();
 });
