@@ -12,12 +12,12 @@
   Frame: picture_16720983.ico
   
   -->
-a
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Online Video Thumbnail Generator</title>
-  <meta name="description" content="Online tool to create snapshots of videos (local file or online by URL)">
+  <meta name="description" content="Online tool to create snapshots of videos (local file)">
   <link rel="stylesheet" href="css/style.css?20250130">
   <style>
     /* Remove video player gradient overlay */
@@ -116,13 +116,6 @@ a
     var muteIndicatorTimeout;
     var pressedKeys = new Set();
 
-    function showInput(id, opt) {
-      console.log(opt)
-      document.getElementById('select-file').style.display = 'none';
-      document.getElementById('select-url').style.display = 'none';
-      document.getElementById(id).style.display = '';
-    }
-    
     function loadPage() {
       var textFields = document.querySelectorAll('.mdc-text-field');
       for (let index = 0; index < textFields.length; index++) {
@@ -502,11 +495,6 @@ a
       }
     }
     
-    function loadVideoURL(url) {
-      // This would be implemented in your app.js
-      console.log('Loading video URL:', url);
-    }
-    
     function snapPicture() {
       // This would be implemented in your app.js
       // Fallback minimal implementation: draw current video frame on canvas and update preview image
@@ -676,66 +664,9 @@ a
   </header>
   <main class="mdc-top-app-bar--fixed-adjust">
     <div class="video_data">
-      <div class="mdc-card mdc-card--outlined">
-        <div>
-          <div class="mdc-form-field">
-            <div class="mdc-radio">
-              <input class="mdc-radio__native-control" type="radio" onclick="showInput('select-url', this)"
-                id="video_url" name="video_source" >
-              <div class="mdc-radio__background">
-                <div class="mdc-radio__outer-circle"></div>
-                <div class="mdc-radio__inner-circle"></div>
-              </div>
-              <div class="mdc-radio__ripple"></div>
-            </div>
-            <label for="video_url">Video from URL</label>
-          </div>
-
-          <div class="mdc-form-field">
-            <div class="mdc-radio">
-              <input class="mdc-radio__native-control" type="radio" onclick="showInput('select-file', this)"
-                id="video_file" checked name="video_source">
-              <div class="mdc-radio__background">
-                <div class="mdc-radio__outer-circle"></div>
-                <div class="mdc-radio__inner-circle"></div>
-              </div>
-              <div class="mdc-radio__ripple"></div>
-            </div>
-            <label for="video_file">Video from file</label>
-          </div>
-        </div>
-
-        <div class="instructions mdc-form-field">(Currently, youtube/vimeo video URLS are not supported, only URLs
-          pointing to a video resource)</div>
-      </div>
-      <br />
       <div class="mdc-card mdc-card--outlined select-source">
         <div id="select-file">
           <input type="file" class="mdc-text-field__input" id="videofile" accept=".mp4,video/*" onchange="loadVideoFile()">
-        </div>
-        <div id="select-url" style="display:none">
-          <label class="mdc-text-field mdc-text-field--filled">
-            <span class="mdc-text-field__ripple"></span>
-            <span class="mdc-floating-label" id="url-label">Video URL</span>
-            <input id="videourl" size="100" class="mdc-text-field__input" type="text" placeholder="https://"
-              aria-labelledby="url-label">
-            <span class="mdc-line-ripple"></span>
-          </label>
-          <div class="mdc-touch-target-wrapper">
-            <button class="mdc-button mdc-button--raised"
-              onclick="loadVideoURL(document.getElementById('videourl').value)">
-              <span class="mdc-button__ripple"></span>
-              <span class="mdc-button__touch"></span>
-              <span class="mdc-button__label">Load video</span>
-            </button>
-          </div>
-          <div class="instructions mdc-form-field">
-            For youtube URLs, you can use a service to convert Youtube videos to MP4 files (Google for "Youtube mp4").
-            <ul>
-              <li>Use the provided "Download link" URL here, or </li>
-              <li>Download the file to your device and select "Video from file"</li>
-            </ul>
-          </div>
         </div>
       </div>
       <div class="mdc-card mdc-card--outlined video-preview">
