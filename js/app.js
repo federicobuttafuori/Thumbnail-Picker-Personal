@@ -15,6 +15,7 @@ var context = canvas.getContext("2d");
 var slider = document.querySelector("#slider");
 var w, h, ratio;
 var snapProc = null;
+var autosnapCancelled = false;
 //add loadedmetadata which will helps to identify video attributes
 
 function timeUpdate() {
@@ -157,22 +158,66 @@ function autoSnapPictureAfterPercent(percentage) {
     alert("Please load a video first");
     return;
   }
-  clearInterval(snapProc);
-  clearSnaps()
+  // Cancel any existing autosnap process
+  autosnapCancelled = true;
+  clearSnaps();
+  autosnapCancelled = false; // Reset for new process
 
-  var duration = video.duration
+  var duration = video.duration;
   var interval = percentage * duration;
   var time = 0.1;
-
-  // Loop through the video without delay and take a snapshot every 10% of the video
-  snapProc = setInterval(function () {
-    goToTime(video, time);
-    setTimeout(snapPicture,snapd.value * 1 || 400)
+  var times = [];
+  
+  // Pre-calculate all seek times
+  while (time < duration) {
+    times.push(time);
     time += interval;
-    if (time >= duration) {
-      clearInterval(snapProc);
+  }
+
+  var currentIndex = 0;
+  snapProc = true; // Mark that autosnap is active
+  
+  function seekAndSnap() {
+    if (autosnapCancelled || currentIndex >= times.length) {
+      snapProc = null;
+      return; // Done or cancelled
     }
-  }, (snapd.value * 1 || 400) + 100);
+    
+    var targetTime = times[currentIndex];
+    currentIndex++;
+    
+    // Wait for seek to complete using the 'seeked' event
+    var onSeeked = function() {
+      video.removeEventListener('seeked', onSeeked);
+      
+      if (autosnapCancelled) {
+        snapProc = null;
+        return;
+      }
+      
+      // Wait for video frame to be ready using requestAnimationFrame
+      // This ensures the frame is actually rendered before capturing
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          // Double RAF ensures frame is painted
+          if (!autosnapCancelled && video.readyState >= video.HAVE_CURRENT_DATA) {
+            snapPicture();
+          }
+          if (!autosnapCancelled) {
+            seekAndSnap(); // Continue to next frame
+          } else {
+            snapProc = null;
+          }
+        });
+      });
+    };
+    
+    video.addEventListener('seeked', onSeeked, { once: true });
+    video.currentTime = targetTime;
+  }
+  
+  video.pause(); // Pause video for consistent snapshots
+  seekAndSnap(); // Start the process
 }
 
 function autoSnapPictureAfterMin(minutes) {
@@ -181,25 +226,73 @@ function autoSnapPictureAfterMin(minutes) {
     alert("Please load a video first");
     return;
   }
-  clearInterval(snapProc);
+  // Cancel any existing autosnap process
+  autosnapCancelled = true;
   clearSnaps();
+  autosnapCancelled = false; // Reset for new process
 
-  var duration = video.duration
+  var duration = video.duration;
   var interval = 60 * minutes;
   var time = 0.1;
-
-  // Loop through the video without delay and take a snapshot every 1 minute
-  snapProc = setInterval(function () {
-    goToTime(video, time);
-    setTimeout(snapPicture,snapd.value * 1 || 400)
+  var times = [];
+  
+  // Pre-calculate all seek times
+  while (time < duration) {
+    times.push(time);
     time += interval;
-    if (time >= duration) {
-      clearInterval(snapProc);
+  }
+
+  var currentIndex = 0;
+  snapProc = true; // Mark that autosnap is active
+  
+  function seekAndSnap() {
+    if (autosnapCancelled || currentIndex >= times.length) {
+      snapProc = null;
+      return; // Done or cancelled
     }
-  }, (snapd.value * 1 || 400) + 100);
+    
+    var targetTime = times[currentIndex];
+    currentIndex++;
+    
+    // Wait for seek to complete using the 'seeked' event
+    var onSeeked = function() {
+      video.removeEventListener('seeked', onSeeked);
+      
+      if (autosnapCancelled) {
+        snapProc = null;
+        return;
+      }
+      
+      // Wait for video frame to be ready using requestAnimationFrame
+      // This ensures the frame is actually rendered before capturing
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          // Double RAF ensures frame is painted
+          if (!autosnapCancelled && video.readyState >= video.HAVE_CURRENT_DATA) {
+            snapPicture();
+          }
+          if (!autosnapCancelled) {
+            seekAndSnap(); // Continue to next frame
+          } else {
+            snapProc = null;
+          }
+        });
+      });
+    };
+    
+    video.addEventListener('seeked', onSeeked, { once: true });
+    video.currentTime = targetTime;
+  }
+  
+  video.pause(); // Pause video for consistent snapshots
+  seekAndSnap(); // Start the process
 }
 
 function clearSnaps(){
+  // Cancel any active autosnap process
+  autosnapCancelled = true;
+  snapProc = null;
+  
   const container = document.querySelector("#outputs");
   container.innerHTML = "";
   save.disabled = true;

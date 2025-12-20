@@ -564,63 +564,6 @@
       }
     }
     
-    function autoSnapPictureAfterSelection() {
-      const video = document.getElementById('video');
-      if (!video || video.src.includes('blank.mp4') || isNaN(video.duration)) {
-        console.warn('No valid video loaded for auto snap.');
-        return;
-      }
-      video.pause();
-      updatePlayPauseButton();
-      const select = document.getElementById('snap_each');
-      if (!select) return;
-      const val = select.value;
-      let step = 0;
-      if (val.endsWith('%')) {
-        const perc = parseFloat(val);
-        step = (video.duration * perc) / 100;
-      } else if (val.endsWith('m')) {
-        const mins = parseFloat(val);
-        step = mins * 60;
-      }
-      if (step <= 0) return;
-      const times = [];
-      for (let t = 0; t < video.duration; t += step) {
-        times.push(t);
-      }
-      let index = 0;
-      nextSnap();
-      function nextSnap() {
-        if (index >= times.length) {
-          return;
-        }
-        const t = times[index];
-        index++;
-        video.currentTime = t;
-        const delay = parseInt(document.getElementById('snapd').value) || 400;
-        let timePassed = false;
-        let sought = false;
-        const onSeeked = function() {
-          video.removeEventListener('seeked', onSeeked);
-          sought = true;
-          if (timePassed) {
-            snapAndNext();
-          }
-        };
-        video.addEventListener('seeked', onSeeked);
-        snapProc = setTimeout(function() {
-          timePassed = true;
-          if (sought) {
-            snapAndNext();
-          }
-        }, delay);
-        function snapAndNext() {
-          snapPicture();
-          nextSnap();
-        }
-      }
-    }
-    
     function savePicture(btn) {
       // This would be implemented in your app.js
       console.log('Saving picture...');
@@ -792,7 +735,7 @@
           </button>
           <span id="snapsize"></span>
 
-          <button id="clear" class="mdc-button mdc-button--raised" onclick="clearInterval(snapProc);clearSnaps()" style="float:right" disabled>
+          <button id="clear" class="mdc-button mdc-button--raised" onclick="clearSnaps()" style="float:right" disabled>
             <span class="mdc-button__ripple"></span>
             <span class="mdc-button__touch"></span>
             <span class="mdc-button__label save_txt">Clear</span>
