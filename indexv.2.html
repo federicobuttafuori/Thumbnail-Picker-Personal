@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <link rel="icon" type="image/x-icon" href="C:\Users\feder\Desktop\Thumbnail Picker\img\picture_16720983.ico">
+  <!-- 
+  
+  Tech: "E:\sas\Altro\Scripts & Apps (CODING)\online-video-thumbnail-generator-master\img\Jommans-Ironman-Style-Folder-Video.256.ico" 
+  Shrek: "E:\sas\Altro\Scripts & Apps (CODING)\online-video-thumbnail-generator-master\img\shrek.ico"
+  Thunder: "E:\sas\Altro\Scripts & Apps (CODING)\online-video-thumbnail-generator-master\img\THunder swap.ico"
+  Frame: "E:\sas\Altro\Scripts & Apps (CODING)\online-video-thumbnail-generator-master\img\frame_photo_gallery_image_images_picture_icon_258914.ico"
+  Frame: picture_16720983.ico
+  
+  -->
+a
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Online Video Thumbnail Generator</title>
+  <meta name="description" content="Online tool to create snapshots of videos (local file or online by URL)">
+  <link rel="stylesheet" href="css/style.css?20250130">
+  <style>
+    /* Remove video player gradient overlay */
+    video::-webkit-media-controls-panel {
+      background: rgba(0,0,0,0) !important;
+    }
+    
+    video::-webkit-media-controls-overlay-play-button {
+      background: rgba(0,0,0,0) !important;
+    }
+    
+    video::-webkit-media-controls-start-playback-button {
+      background: rgba(0,0,0,0) !important;
+    }
+    
+    /* Remove the gradient overlay completely */
+    video {
+      background: none !important;
+    }
+    
+    video::before {
+      display: none !important;
+    }
+    
+    /* Additional styles to ensure no gradient appears */
+    video::-webkit-media-controls {
+      background: transparent !important;
+    }
+    
+    video::-webkit-media-controls-enclosure {
+      background: transparent !important;
+    }
+
+    /* Optional subtle visual when dragging files over the page */
+    .drag-over-page {
+      outline: 6px dashed rgba(0, 150, 255, 0.25);
+      outline-offset: -6px;
+    }
+
+    /* Speed indicator overlay */
+    .speed-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .speed-indicator.show {
+      opacity: 1;
+    }
+
+    /* Mute indicator overlay */
+    .mute-indicator {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      background: rgba(255, 0, 0, 0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .mute-indicator.show {
+      opacity: 1;
+    }
+  </style>
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-RKLKKLZFDQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-RKLKKLZFDQ');
+  </script>
+  <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <script>
+    var snapProc;
+    var speedIndicatorTimeout;
+    var muteIndicatorTimeout;
+    var pressedKeys = new Set();
+
+    function showInput(id, opt) {
+      console.log(opt)
+      document.getElementById('select-file').style.display = 'none';
+      document.getElementById('select-url').style.display = 'none';
+      document.getElementById(id).style.display = '';
+    }
+    
+    function loadPage() {
+      var textFields = document.querySelectorAll('.mdc-text-field');
+      for (let index = 0; index < textFields.length; index++) {
+        var element = textFields[index];
+        new mdc.textField.MDCTextField(element);
+      }
+      
+      // Setup keyboard event listeners
+      setupKeyboardControls();
+
+      // Setup drag & drop everywhere
+      setupGlobalDragAndDrop();
+
+      // Create speed and mute indicators
+      createIndicators();
+    }
+
+    // Create visual indicators for speed and mute
+    function createIndicators() {
+      // Speed indicator
+      const speedIndicator = document.createElement('div');
+      speedIndicator.id = 'speed-indicator';
+      speedIndicator.className = 'speed-indicator';
+      speedIndicator.textContent = '1x';
+      document.body.appendChild(speedIndicator);
+
+      // Mute indicator
+      const muteIndicator = document.createElement('div');
+      muteIndicator.id = 'mute-indicator';
+      muteIndicator.className = 'mute-indicator';
+      muteIndicator.textContent = 'MUTED';
+      document.body.appendChild(muteIndicator);
+    }
+
+    // Show speed indicator temporarily
+    function showSpeedIndicator(speed) {
+      const indicator = document.getElementById('speed-indicator');
+      if (!indicator) return;
+      
+      indicator.textContent = speed + 'x';
+      indicator.classList.add('show');
+      
+      clearTimeout(speedIndicatorTimeout);
+      speedIndicatorTimeout = setTimeout(() => {
+        indicator.classList.remove('show');
+      }, 1500);
+    }
+
+    // Show mute indicator temporarily
+    function showMuteIndicator(isMuted) {
+      const indicator = document.getElementById('mute-indicator');
+      if (!indicator) return;
+      
+      indicator.textContent = isMuted ? 'MUTED' : 'UNMUTED';
+      indicator.style.backgroundColor = isMuted ? 'rgba(255, 0, 0, 0.8)' : 'rgba(0, 150, 0, 0.8)';
+      indicator.classList.add('show');
+      
+      clearTimeout(muteIndicatorTimeout);
+      muteIndicatorTimeout = setTimeout(() => {
+        indicator.classList.remove('show');
+      }, 1500);
+    }
+    
+    // Enhanced keyboard control system
+    function setupKeyboardControls() {
+      document.addEventListener('keydown', function(e) {
+        const video = document.getElementById('video');
+        // If there's no real video loaded, do nothing (protect against blank.mp4)
+        if (!video || !video.src || video.src.includes('blank.mp4')) {
+          // Still allow Enter to be ignored when no video
+          return;
+        }
+        
+        // Avoid firing our shortcuts while typing in form fields
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : null;
+        const isEditable = tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable);
+        if (isEditable) return;
+
+        // Track pressed keys
+        pressedKeys.add(e.code);
+
+        // Handle speed controls (Shift + comma/period)
+        if (e.shiftKey && (e.code === 'Comma' || e.code === 'Period')) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Check if both Period and Comma are pressed together with Shift (reset to 1x)
+          if (e.shiftKey && pressedKeys.has('Comma') && pressedKeys.has('Period')) {
+            video.playbackRate = 1;
+            showSpeedIndicator(1);
+            return;
+          }
+          
+          const currentSpeed = video.playbackRate;
+          let newSpeed;
+          
+          if (e.code === 'Comma') {
+            // Shift + , (slower)
+            newSpeed = Math.max(0.25, currentSpeed - 0.25);
+          } else {
+            // Shift + . (faster) 
+            newSpeed = Math.min(8, currentSpeed + 0.25);
+          }
+          
+          video.playbackRate = newSpeed;
+          showSpeedIndicator(newSpeed);
+          return;
+        }
+
+        // Handle mute toggle (M key)
+        if (e.code === 'KeyM') {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          video.muted = !video.muted;
+          showMuteIndicator(video.muted);
+          return;
+        }
+
+        // Handle fullscreen toggle (F key)
+        if (e.code === 'KeyF') {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          if (!document.fullscreenElement) {
+            // Enter fullscreen for video element
+            video.requestFullscreen().catch(err => {
+              console.error('Error attempting to enable fullscreen:', err);
+            });
+          } else {
+            // Exit fullscreen
+            document.exitFullscreen().catch(err => {
+              console.error('Error attempting to exit fullscreen:', err);
+            });
+          }
+          return;
+        }
+
+        // Prevent default behavior for our custom shortcuts where appropriate
+        const shouldPreventDefault = (
+          e.code === 'Space' || 
+          e.code === 'ArrowLeft' || 
+          e.code === 'ArrowRight' || 
+          e.code === 'ArrowUp' || 
+          e.code === 'ArrowDown' ||
+          e.code === 'Enter'
+        );
+        
+        if (shouldPreventDefault) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        
+        switch(e.code) {
+          case 'Space':
+            // Toggle play/pause
+            if (video.paused) {
+              video.play();
+            } else {
+              video.pause();
+            }
+            updatePlayPauseButton();
+            break;
+            
+          case 'ArrowLeft':
+            if (e.ctrlKey) {
+              // CTRL + Left: -1 minute
+              goToTime(video, video.currentTime - 60);
+            } else if (e.shiftKey) {
+              // SHIFT + Left: -5 seconds
+              goToTime(video, video.currentTime - 5);
+            } else if (e.altKey) {
+              // ALT + Left: -1 frame (assuming 25fps)
+              goToTime(video, video.currentTime - (1/25));
+            } else {
+              // Left: -1 second
+              goToTime(video, video.currentTime - 1);
+            }
+            break;
+            
+          case 'ArrowRight':
+            if (e.ctrlKey) {
+              // CTRL + Right: +1 minute
+              goToTime(video, video.currentTime + 60);
+            } else if (e.shiftKey) {
+              // SHIFT + Right: +5 seconds
+              goToTime(video, video.currentTime + 5);
+            } else if (e.altKey) {
+              // ALT + Right: +1 frame (assuming 25fps)
+              goToTime(video, video.currentTime + (1/25));
+            } else {
+              // Right: +1 second
+              goToTime(video, video.currentTime + 1);
+            }
+            break;
+
+          case 'Enter':
+            // Pressing Enter (when not focused in an input) should snap the frame
+            // Only trigger if a proper video is loaded
+            snapPicture();
+            break;
+        }
+      }, true); // Use capture phase to ensure we catch the event first
+      
+      // Track key releases
+      document.addEventListener('keyup', function(e) {
+        pressedKeys.delete(e.code);
+      });
+    }
+    
+    // Utility function for time navigation
+    function goToTime(video, time) {
+      if (!video) return;
+      
+      // Ensure time is within bounds
+      time = Math.max(0, Math.min(time, video.duration || 0));
+      video.currentTime = time;
+      
+      // Update slider if it exists
+      const slider = document.getElementById('slider');
+      if (slider && video.duration) {
+        slider.value = time;
+      }
+    }
+    
+    // Update play/pause button display
+    function updatePlayPauseButton() {
+      const playControl = document.querySelector('.play-control');
+      const pauseControl = document.querySelector('.pause-control');
+      const video = document.getElementById('video');
+      
+      if (playControl && pauseControl && video) {
+        if (video.paused) {
+          playControl.style.display = '';
+          pauseControl.style.display = 'none';
+        } else {
+          playControl.style.display = 'none';
+          pauseControl.style.display = '';
+        }
+      }
+    }
+    
+    // Global drag & drop handlers to allow dropping a video anywhere on the page
+    function setupGlobalDragAndDrop() {
+      const dropTargets = [document.documentElement, document.body];
+      let dragOverCount = 0;
+
+      function onDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        // Add visual hint to whole page
+        document.documentElement.classList.add('drag-over-page');
+      }
+      function onDragEnter(e) {
+        dragOverCount++;
+        e.preventDefault();
+        document.documentElement.classList.add('drag-over-page');
+      }
+      function onDragLeave(e) {
+        dragOverCount = Math.max(0, dragOverCount - 1);
+        if (dragOverCount === 0) {
+          document.documentElement.classList.remove('drag-over-page');
+        }
+      }
+      function onDrop(e) {
+        e.preventDefault();
+        dragOverCount = 0;
+        document.documentElement.classList.remove('drag-over-page');
+
+        const dt = e.dataTransfer;
+        if (!dt || !dt.files || dt.files.length === 0) return;
+
+        const file = dt.files[0];
+        // Accept typical video mime types or mp4 extension
+        const isVideo = file.type.startsWith('video') || /\.mp4$/i.test(file.name) || /\.mov$/i.test(file.name) || /\.webm$/i.test(file.name);
+        if (!isVideo) {
+          alert('Please drop a video file (mp4, webm, mov, etc).');
+          return;
+        }
+
+        // Try to set the file input's files (so existing handlers that rely on input.files work)
+        try {
+          const input = document.getElementById('videofile');
+          if (input) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            input.files = dataTransfer.files;
+
+            // Dispatch change event so any existing onchange logic runs
+            const ev = new Event('change', { bubbles: true });
+            input.dispatchEvent(ev);
+          }
+        } catch (err) {
+          // If setting input.files fails (browser restrictions), fall back to directly loading into the video element
+          console.warn('Failed to programmatically set input.files, falling back to setting video.src directly.', err);
+        }
+
+        // Also set the video element source directly to ensure it loads regardless
+        const videoEl = document.getElementById('video');
+        try {
+          if (videoEl && file) {
+            const objectUrl = URL.createObjectURL(file);
+            // If app.js later expects to handle loadVideoFile on the input change, it may override this, but setting src ensures the video is visible immediately.
+            videoEl.src = objectUrl;
+            videoEl.load();
+            videoEl.onloadedmetadata = function() {
+              // Reveal controls and UI if needed by existing code (some code checks for metadata)
+              const videoControls = document.getElementById('videoControls');
+              if (videoControls) videoControls.style.display = '';
+              // Update slider max
+              const slider = document.getElementById('slider');
+              if (slider && videoEl.duration) {
+                slider.max = videoEl.duration;
+                slider.value = videoEl.currentTime || 0;
+              }
+              // Enable snap button if present
+              const snapBtn = document.getElementById('snap');
+              if (snapBtn) snapBtn.disabled = false;
+              const snap2Btn = document.getElementById('snap2');
+              if (snap2Btn) snap2Btn.disabled = false;
+            };
+          }
+        } catch (err) {
+          console.error('Error loading dropped video to player:', err);
+        }
+
+        // If app code exposes loadVideoFile(), call it to let the app perform its standard setup
+        try {
+          if (typeof loadVideoFile === 'function') {
+            // Some implementations expect loadVideoFile to read the input element;
+            // since we set input.files above (when allowed) that's ideal.
+            loadVideoFile();
+          }
+        } catch (err) {
+          console.warn('Calling loadVideoFile() failed (it may not exist yet):', err);
+        }
+      }
+
+      dropTargets.forEach(t => {
+        t.addEventListener('dragover', onDragOver, false);
+        t.addEventListener('dragenter', onDragEnter, false);
+        t.addEventListener('dragleave', onDragLeave, false);
+        t.addEventListener('drop', onDrop, false);
+      });
+
+      // Prevent browser from navigating away if file is dropped outside (common issue)
+      window.addEventListener('dragover', function(e){ e.preventDefault(); }, false);
+      window.addEventListener('drop', function(e){ e.preventDefault(); }, false);
+    }
+    
+    // Mock functions that would normally be in app.js
+    function loadVideoFile() {
+      // This placeholder will be replaced by your js/app.js when it loads.
+      // Keep here in case app.js is not present; this provides a minimal fallback behavior.
+      console.log('Loading video file (placeholder)...');
+      const input = document.getElementById('videofile');
+      if (!input || !input.files || input.files.length === 0) return;
+      const file = input.files[0];
+      const videoEl = document.getElementById('video');
+      if (videoEl && file) {
+        const objectUrl = URL.createObjectURL(file);
+        videoEl.src = objectUrl;
+        videoEl.load();
+        videoEl.onloadedmetadata = function() {
+          const videoControls = document.getElementById('videoControls');
+          if (videoControls) videoControls.style.display = '';
+          const slider = document.getElementById('slider');
+          if (slider && videoEl.duration) {
+            slider.max = videoEl.duration;
+            slider.value = videoEl.currentTime || 0;
+          }
+          const snapBtn = document.getElementById('snap');
+          if (snapBtn) snapBtn.disabled = false;
+          const snap2Btn = document.getElementById('snap2');
+          if (snap2Btn) snap2Btn.disabled = false;
+        };
+      }
+    }
+    
+    function loadVideoURL(url) {
+      // This would be implemented in your app.js
+      console.log('Loading video URL:', url);
+    }
+    
+    function snapPicture() {
+      // This would be implemented in your app.js
+      // Fallback minimal implementation: draw current video frame on canvas and update preview image
+      try {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const preview = document.getElementById('preview');
+        const snapBtn = document.getElementById('snap');
+        if (!video || (video.src && video.src.includes('blank.mp4'))) {
+          console.warn('No video loaded to snap.');
+          return;
+        }
+        if (!canvas || !preview) {
+          console.warn('No canvas/preview to render to.');
+          return;
+        }
+
+        // Choose width from videow input if present, else use video's intrinsic width
+        const wInput = document.getElementById('videow');
+        const desiredWidth = (wInput && !isNaN(parseInt(wInput.value))) ? parseInt(wInput.value) : video.videoWidth || 640;
+        const aspect = (video.videoWidth && video.videoHeight) ? (video.videoHeight / video.videoWidth) : (9/16);
+        const desiredHeight = Math.round(desiredWidth * aspect);
+
+        canvas.width = desiredWidth;
+        canvas.height = desiredHeight;
+        const ctx = canvas.getContext('2d');
+        // Draw with object-fit: contain behavior (center)
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Compute scale
+        const videoRatio = video.videoWidth / video.videoHeight;
+        const canvasRatio = canvas.width / canvas.height;
+        let drawW = canvas.width, drawH = canvas.height;
+        if (videoRatio > canvasRatio) {
+          drawW = canvas.width;
+          drawH = Math.round(canvas.width / videoRatio);
+        } else {
+          drawH = canvas.height;
+          drawW = Math.round(canvas.height * videoRatio);
+        }
+        const dx = Math.round((canvas.width - drawW) / 2);
+        const dy = Math.round((canvas.height - drawH) / 2);
+        try {
+          ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, dx, dy, drawW, drawH);
+        } catch (err) {
+          console.warn('drawImage failed (cross-origin or metadata issue):', err);
+        }
+        // Update preview image with data URL
+        try {
+          const dataUrl = canvas.toDataURL('image/png');
+          preview.src = dataUrl;
+          preview.style.display = '';
+          // Enable save button if present
+          const saveBtn = document.getElementById('save');
+          if (saveBtn) saveBtn.disabled = false;
+          // Provide a direct download link as well (optional)
+          const imagelink = document.getElementById('imagelink');
+          if (imagelink) {
+            imagelink.href = dataUrl;
+            imagelink.style.display = '';
+          }
+        } catch (err) {
+          console.error('Failed to generate image data URL:', err);
+        }
+      } catch (err) {
+        console.error('snapPicture fallback failed:', err);
+      }
+    }
+    
+    function autoSnapPictureAfterSelection() {
+      const video = document.getElementById('video');
+      if (!video || video.src.includes('blank.mp4') || isNaN(video.duration)) {
+        console.warn('No valid video loaded for auto snap.');
+        return;
+      }
+      video.pause();
+      updatePlayPauseButton();
+      const select = document.getElementById('snap_each');
+      if (!select) return;
+      const val = select.value;
+      let step = 0;
+      if (val.endsWith('%')) {
+        const perc = parseFloat(val);
+        step = (video.duration * perc) / 100;
+      } else if (val.endsWith('m')) {
+        const mins = parseFloat(val);
+        step = mins * 60;
+      }
+      if (step <= 0) return;
+      const times = [];
+      for (let t = 0; t < video.duration; t += step) {
+        times.push(t);
+      }
+      let index = 0;
+      nextSnap();
+      function nextSnap() {
+        if (index >= times.length) {
+          return;
+        }
+        const t = times[index];
+        index++;
+        video.currentTime = t;
+        const delay = parseInt(document.getElementById('snapd').value) || 400;
+        let timePassed = false;
+        let sought = false;
+        const onSeeked = function() {
+          video.removeEventListener('seeked', onSeeked);
+          sought = true;
+          if (timePassed) {
+            snapAndNext();
+          }
+        };
+        video.addEventListener('seeked', onSeeked);
+        snapProc = setTimeout(function() {
+          timePassed = true;
+          if (sought) {
+            snapAndNext();
+          }
+        }, delay);
+        function snapAndNext() {
+          snapPicture();
+          nextSnap();
+        }
+      }
+    }
+    
+    function savePicture(btn) {
+      // This would be implemented in your app.js
+      console.log('Saving picture...');
+    }
+    
+    function zipAllImages(btn) {
+      // This would be implemented in your app.js
+      console.log('Zipping all images...');
+    }
+    
+    function clearSnaps() {
+      // This would be implemented in your app.js
+      console.log('Clearing snaps...');
+    }
+    
+    function resize() {
+      // This would be implemented in your app.js
+      console.log('Resizing...');
+    }
+    
+    window.addEventListener("load", loadPage);
+  </script>
+</head>
+
+<body>
+  <header class="mdc-top-app-bar">
+    <div class="mdc-top-app-bar__row">
+      <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+        <!--<button class="material-icons mdc-top-app-bar__navigation-icon mdc-icon-button" aria-label="Open navigation menu">menu</button>-->
+        <span class="mdc-top-app-bar__title">Online Video Thumbnail Generator</span>
+      </section>
+      <!-- <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-end" role="toolbar">
+        <a class="toolbar-menu" target="_blank" href="https://forms.gle/AkvW2rRQsTfobxFE8"
+          title="Feedback and feature requests">Feedback</a>
+        &nbsp;
+        <button onclick="document.location='https://github.com/fraigo/online-video-thumbnail-generator'"
+          class="material-icons mdc-top-app-bar__action-item mdc-icon-button" aria-label="Options">
+          <img src="https://github.com/fluidicon.png" width="48"></button>
+      </section> -->
+    </div>
+  </header>
+  <main class="mdc-top-app-bar--fixed-adjust">
+    <div class="video_data">
+      <div class="mdc-card mdc-card--outlined">
+        <div>
+          <div class="mdc-form-field">
+            <div class="mdc-radio">
+              <input class="mdc-radio__native-control" type="radio" onclick="showInput('select-url', this)"
+                id="video_url" name="video_source" >
+              <div class="mdc-radio__background">
+                <div class="mdc-radio__outer-circle"></div>
+                <div class="mdc-radio__inner-circle"></div>
+              </div>
+              <div class="mdc-radio__ripple"></div>
+            </div>
+            <label for="video_url">Video from URL</label>
+          </div>
+
+          <div class="mdc-form-field">
+            <div class="mdc-radio">
+              <input class="mdc-radio__native-control" type="radio" onclick="showInput('select-file', this)"
+                id="video_file" checked name="video_source">
+              <div class="mdc-radio__background">
+                <div class="mdc-radio__outer-circle"></div>
+                <div class="mdc-radio__inner-circle"></div>
+              </div>
+              <div class="mdc-radio__ripple"></div>
+            </div>
+            <label for="video_file">Video from file</label>
+          </div>
+        </div>
+
+        <div class="instructions mdc-form-field">(Currently, youtube/vimeo video URLS are not supported, only URLs
+          pointing to a video resource)</div>
+      </div>
+      <br />
+      <div class="mdc-card mdc-card--outlined select-source">
+        <div id="select-file">
+          <input type="file" class="mdc-text-field__input" id="videofile" accept=".mp4,video/*" onchange="loadVideoFile()">
+        </div>
+        <div id="select-url" style="display:none">
+          <label class="mdc-text-field mdc-text-field--filled">
+            <span class="mdc-text-field__ripple"></span>
+            <span class="mdc-floating-label" id="url-label">Video URL</span>
+            <input id="videourl" size="100" class="mdc-text-field__input" type="text" placeholder="https://"
+              aria-labelledby="url-label">
+            <span class="mdc-line-ripple"></span>
+          </label>
+          <div class="mdc-touch-target-wrapper">
+            <button class="mdc-button mdc-button--raised"
+              onclick="loadVideoURL(document.getElementById('videourl').value)">
+              <span class="mdc-button__ripple"></span>
+              <span class="mdc-button__touch"></span>
+              <span class="mdc-button__label">Load video</span>
+            </button>
+          </div>
+          <div class="instructions mdc-form-field">
+            For youtube URLs, you can use a service to convert Youtube videos to MP4 files (Google for "Youtube mp4").
+            <ul>
+              <li>Use the provided "Download link" URL here, or </li>
+              <li>Download the file to your device and select "Video from file"</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="mdc-card mdc-card--outlined video-preview">
+        <div id="videoInfo" class="mdc-card">
+        </div>
+        <video id="video" controls width="640" crossorigin="anonymous">
+          <source src="blank.mp4" type="video/mp4">
+        </video>
+        <div>Select the frame to capture using video controls.</div>
+        <div id="videoControls" class="video-controls" style="display:none">
+          <div>
+            <input id="slider" oninput="goToTime(video,this.value)" onmouseover="this.title=this.value+'seg'"
+              type="range" min="0" max="100" value="0" name="position">
+          </div>
+          <div class="button-container">
+            <button category="controls" onclick="goToTime(video,0)">
+                <span class="material-icons play-controls">skip_previous</span>
+              <br><span>&nbsp;</span></button>
+            <button category="controls" onclick="goToTime(video,video.currentTime-60)">
+              <span class="material-icons play-controls">fast_rewind</span>
+              <br><span>-1m</span></button>
+            <button category="controls" onclick="goToTime(video,video.currentTime-5)">
+              <span class="material-icons play-controls">fast_rewind</span>
+              <br><span>-5s</span></button>
+            <button category="controls" onclick="goToTime(video,video.currentTime-1)">
+              <span class="material-icons play-controls">fast_rewind</span>
+              <br><span>-1s</span></button>
+            <button category="controls" onclick="goToTime(video,video.currentTime-1/25)">
+              <span class="material-icons play-controls">fast_rewind</span>
+              <br><span>-1fr</span></button>
+            <button category="controls"
+              onclick="video.paused?video.play():video.pause(); updatePlayPauseButton();">
+              <div>
+                <span class="material-icons play-controls play-control">play_arrow</span>
+                <span class="material-icons play-controls pause-control" style="display: none" >pause</span>
+              </div>
+              <br><span>&nbsp;</span></button>
+            <button category="controls" onclick="goToTime(video,video.currentTime+1/25)">
+              <span class="material-icons play-controls">fast_forward</span>
+              <br><span>+1fr</span></button>
+            <button category="controls" onclick="goToTime(video,video.currentTime+1)">
+              <span class="material-icons play-controls">fast_forward</span>
+              <br><span>+1s</span></button>
+            <button category="controls" onclick="goToTime(video,video.currentTime+5)">
+              <span class="material-icons play-controls">fast_forward</span>
+              <br><span>+5s</span></button>
+            <button category="controls" onclick="goToTime(video,video.currentTime+60)">
+              <span class="material-icons play-controls">fast_forward</span>
+              <br><span>+1m</span></button>
+            <button category="controls" onclick="goToTime(video,video.duration)">
+              <span class="material-icons play-controls">skip_next</span>
+              <br><span>&nbsp;</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="video_output">
+      <div class="mdc-card mdc-card--outlined select-source">
+        <div>
+          <div style="display: flex; align-items: center; flex-wrap: wrap;">
+            <label class="mdc-text-field mdc-text-field--filled" id="videowidth" >
+              <span class="mdc-text-field__ripple"></span>
+              <span class="mdc-floating-label" id="size-label">Snap width</span>
+              <input id="videow" type=number size="5" onchange="resize()" value="1600" class="mdc-text-field__input"
+                type="text" placeholder="" aria-labelledby="size-label">
+              <span class="mdc-line-ripple"></span>
+            </label>
+  
+
+            
+            <button id="snap" class="mdc-button mdc-button--raised" onclick="snapPicture()" disabled>
+              <span class="mdc-button__ripple"></span>
+              <span class="mdc-button__touch"></span>
+              <span class="mdc-button__label">Snap photo</span>
+            </button>
+            <div style="display: flex;">
+              <button id="snap2" class="snap2 mdc-button mdc-button--raised" onclick="autoSnapPictureAfterSelection()" disabled>
+                <span class="mdc-button__ripple"></span>
+                <span class="mdc-button__touch"></span>
+                <span class="mdc-button__label">Auto snap each</span>
+              </button>
+              <select id="snap_each">
+                <option value="2%">2% (50 img)</option>
+                <option value="4%" selected>4% (25 img)</option>
+                <option value="5%">5% (20 img)</option>
+                <option value="6.25%">6.25% (16 img)</option>
+                <option value="10%">10% (10 img)</option>
+                <option value="0.0166666m">1 sec</option>
+                <option value="0.0833333m">5 sec</option>
+                <option value="0.166666m">10 sec</option>
+                <option value="0.5m">30 sec</option>
+                <option value="1m">1 minute</option>
+              </select>
+            </div>
+            <label class="mdc-text-field mdc-text-field--filled" id="snapdelay" >
+              <span class="mdc-text-field__ripple"></span>
+              <span class="mdc-floating-label" id="size-label">Snap delay</span>
+              <input id="snapd" type=number size="5" onchange="resize()" value="400" class="mdc-text-field__input"
+                type="text" placeholder="" aria-labelledby="size-label" >
+              <span class="mdc-line-ripple"></span>
+            </label>
+          </div>
+        </div>
+        <div class="canvas-container">
+          <canvas id="canvas" width="640" height="480" style="display: none"></canvas>
+          <img id="preview" src="blank.png"
+            style="display: none; margin-bottom: 1rem; width: 100%; height: auto; max-height: 320px; object-fit: contain;">
+          <div id="outputs">
+          </div>
+        </div>
+        <div>
+          <button id="save" class="mdc-button mdc-button--raised save_btn" onclick="savePicture(this)" disabled>
+            <span class="mdc-button__ripple"></span>
+            <span class="mdc-button__touch"></span>
+            <span class="mdc-button__label save_txt">Save Image</span>
+          </button>
+          <button id="saveall" class="mdc-button mdc-button--raised save_btn" onclick="zipAllImages(this)" disabled>
+            <span class="mdc-button__ripple"></span>
+            <span class="mdc-button__touch"></span>
+            <span class="mdc-button__label save_txt">Save All</span>
+            <span id="snapsize"></span>
+          </button>
+          <span id="snapsize"></span>
+
+          <button id="clear" class="mdc-button mdc-button--raised" onclick="clearInterval(snapProc);clearSnaps()" style="float:right" disabled>
+            <span class="mdc-button__ripple"></span>
+            <span class="mdc-button__touch"></span>
+            <span class="mdc-button__label save_txt">Clear</span>
+          </button>
+        </div>
+        <a href="" id="imagelink" style="display:none">Image link</a>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- start the script ... within that declare variables as follows... -->
+  <script src="js/jszip.min.js"></script> 
+  <script src="js/filesaver.min.js"></script>
+  <script src="js/app.js?20250130"></script>
+
+</body>
+
+</html>
