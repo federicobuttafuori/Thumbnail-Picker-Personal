@@ -218,14 +218,16 @@ body {
   }
   .output-container label{
     font-size: 0.75em;
-    background: #fff;
-    padding: 2px 3px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    padding: 4px 8px;
     border-radius: 3px;
     font-size: 0.75em;
     position: absolute;
-    right: 3px;
+    left: 3px;
     bottom: 6px;
     max-width: 82%;
+    font-family: monospace;
   }
   .output-remove{
     position: absolute;
@@ -247,6 +249,31 @@ body {
   
   .output.selected {
     border-color: #6200ee;
+  }
+
+  .settings-menu {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    width: 320px;
+    max-width: calc(100vw - 40px);
+    z-index: 2000;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+
+  .settings-menu .mdc-card {
+    box-shadow: 0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12), 0 2px 4px -1px rgba(0,0,0,.2);
+  }
+
+  .settings-menu h3 {
+    font-size: 1.1em;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+
+  .settings-menu .mdc-form-field {
+    margin-bottom: 8px;
   }
   
   

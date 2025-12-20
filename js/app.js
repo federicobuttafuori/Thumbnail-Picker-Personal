@@ -74,6 +74,31 @@ function resize() {
   snapSize.innerHTML = w + "x" + h;
 }
 
+function getDisplaySettings() {
+  return {
+    showTime: document.getElementById('show-time') ? document.getElementById('show-time').checked : false,
+    showDimensions: document.getElementById('show-dimensions') ? document.getElementById('show-dimensions').checked : true,
+    showSize: document.getElementById('show-size') ? document.getElementById('show-size').checked : true
+  };
+}
+
+function formatImageLabel(time, width, height, sizeMB) {
+  var settings = getDisplaySettings();
+  var parts = [];
+  
+  if (settings.showTime) {
+    parts.push(time.toFixed(2) + 's');
+  }
+  if (settings.showDimensions) {
+    parts.push(width + 'x' + height);
+  }
+  if (settings.showSize) {
+    parts.push(sizeMB + 'MB');
+  }
+  
+  return parts.join(' ');
+}
+
 function snapPicture() {
   context.fillRect(0, 0, w, h);
   context.drawImage(video, 0, 0, w, h);
@@ -97,13 +122,18 @@ function snapPicture() {
   img.addEventListener("click", () => selectImage(img));
   img.title="t"+("000" + time.toFixed(2)).slice(-7)+'seg';
   img.onclick=function(){ goToTime(video,time) };
+  img.setAttribute("data-time", time);
+  img.setAttribute("data-width", w);
+  img.setAttribute("data-height", h);
+  img.setAttribute("data-size", sizeMB);
 
   var cont = document.createElement("div");
   cont.className = "output-container";
   cont.style.display = "inline-block";
   cont.appendChild(img);
   var label=document.createElement("label");
-  label.innerHTML=(time.toFixed(2))+'s '+w+"x"+h+' '+sizeMB+'MB';
+  label.className = "output-label";
+  label.innerHTML = formatImageLabel(time, w, h, sizeMB);
   cont.appendChild(label);
 
   var close = document.createElement("a");
@@ -122,6 +152,23 @@ function snapPicture() {
   container.appendChild(cont);
   img.setAttribute("size",w + "x" + h);
   selectImage(img);
+}
+
+function updateAllImageLabels() {
+  var labels = document.querySelectorAll('.output-label');
+  labels.forEach(function(label) {
+    var container = label.closest('.output-container');
+    if (container) {
+      var img = container.querySelector('.output');
+      if (img) {
+        var time = parseFloat(img.getAttribute('data-time')) || 0;
+        var width = parseInt(img.getAttribute('data-width')) || 0;
+        var height = parseInt(img.getAttribute('data-height')) || 0;
+        var sizeMB = parseFloat(img.getAttribute('data-size')) || 0;
+        label.innerHTML = formatImageLabel(time, width, height, sizeMB);
+      }
+    }
+  });
 }
 function autoSnapPictureAfterSelection(){
   var sel = document.querySelector('#snap_each')

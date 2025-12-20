@@ -123,6 +123,13 @@
         new mdc.textField.MDCTextField(element);
       }
       
+      // Initialize Material Design checkboxes
+      var checkboxes = document.querySelectorAll('.mdc-checkbox');
+      for (let index = 0; index < checkboxes.length; index++) {
+        var element = checkboxes[index];
+        new mdc.checkbox.MDCCheckbox(element);
+      }
+      
       // Setup keyboard event listeners
       setupKeyboardControls();
 
@@ -585,6 +592,24 @@
     }
     
     window.addEventListener("load", loadPage);
+    
+    // Settings menu toggle
+    function toggleSettings() {
+      const menu = document.getElementById('settings-menu');
+      if (menu.style.display === 'none') {
+        menu.style.display = 'block';
+      } else {
+        menu.style.display = 'none';
+      }
+    }
+    
+    // Update display settings
+    function updateDisplaySettings() {
+      // This will be called from app.js to update existing labels
+      if (typeof updateAllImageLabels === 'function') {
+        updateAllImageLabels();
+      }
+    }
   </script>
 </head>
 
@@ -594,6 +619,9 @@
       <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
         <!--<button class="material-icons mdc-top-app-bar__navigation-icon mdc-icon-button" aria-label="Open navigation menu">menu</button>-->
         <span class="mdc-top-app-bar__title">Online Video Thumbnail Generator</span>
+      </section>
+      <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-end" role="toolbar">
+        <button class="material-icons mdc-top-app-bar__action-item mdc-icon-button" aria-label="Settings" onclick="toggleSettings()">settings</button>
       </section>
       <!-- <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-end" role="toolbar">
         <a class="toolbar-menu" target="_blank" href="https://forms.gle/AkvW2rRQsTfobxFE8"
@@ -605,6 +633,67 @@
       </section> -->
     </div>
   </header>
+  
+  <!-- Settings Menu -->
+  <div id="settings-menu" class="settings-menu" style="display: none;">
+    <div class="mdc-card mdc-card--outlined">
+      <div style="padding: 16px;">
+        <h3 style="margin-top: 0;">Display Options</h3>
+        <div class="mdc-form-field">
+          <div class="mdc-checkbox">
+            <input type="checkbox" class="mdc-checkbox__native-control" id="show-time" onchange="updateDisplaySettings()">
+            <div class="mdc-checkbox__background">
+              <svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
+                <path class="mdc-checkbox__checkmark-path" fill="none" d="M1.73,12.91 8.1,19.28 22.79,4.59"/>
+              </svg>
+              <div class="mdc-checkbox__mixedmark"></div>
+            </div>
+          </div>
+          <label for="show-time">Show timestamp (seconds)</label>
+        </div>
+        <div class="mdc-form-field">
+          <div class="mdc-checkbox">
+            <input type="checkbox" class="mdc-checkbox__native-control" id="show-dimensions" checked onchange="updateDisplaySettings()">
+            <div class="mdc-checkbox__background">
+              <svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
+                <path class="mdc-checkbox__checkmark-path" fill="none" d="M1.73,12.91 8.1,19.28 22.79,4.59"/>
+              </svg>
+              <div class="mdc-checkbox__mixedmark"></div>
+            </div>
+          </div>
+          <label for="show-dimensions">Show dimensions (width x height)</label>
+        </div>
+        <div class="mdc-form-field">
+          <div class="mdc-checkbox">
+            <input type="checkbox" class="mdc-checkbox__native-control" id="show-size" checked onchange="updateDisplaySettings()">
+            <div class="mdc-checkbox__background">
+              <svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
+                <path class="mdc-checkbox__checkmark-path" fill="none" d="M1.73,12.91 8.1,19.28 22.79,4.59"/>
+              </svg>
+              <div class="mdc-checkbox__mixedmark"></div>
+            </div>
+          </div>
+          <label for="show-size">Show file size (MB)</label>
+        </div>
+        
+        <h3 style="margin-top: 24px;">Keyboard Shortcuts</h3>
+        <div style="font-size: 0.9em; line-height: 1.6;">
+          <div><strong>Space</strong> - Play/Pause video</div>
+          <div><strong>Enter</strong> - Snap current frame</div>
+          <div><strong>Right Arrow</strong> - Forward 1 second</div>
+          <div><strong>Shift + Right Arrow</strong> - Forward 5 seconds</div>
+          <div><strong>Ctrl + Right Arrow</strong> - Forward 1 minute</div>
+          <div><strong>Alt + Right Arrow</strong> - Forward 1 frame</div>
+          <div><strong>M</strong> - Toggle mute</div>
+          <div><strong>F</strong> - Toggle fullscreen</div>
+          <div><strong>Shift + ,</strong> - Decrease playback speed</div>
+          <div><strong>Shift + .</strong> - Increase playback speed</div>
+          <div><strong>Shift + , + .</strong> - Reset playback speed to 1x</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
   <main class="mdc-top-app-bar--fixed-adjust">
     <div class="video_data">
       <div class="mdc-card mdc-card--outlined select-source">
