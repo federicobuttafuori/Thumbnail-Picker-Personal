@@ -141,6 +141,9 @@
       // Setup keyboard event listeners
       setupKeyboardControls();
 
+      // Setup video focus management
+      setupVideoFocusManagement();
+
       // Setup drag & drop everywhere
       setupGlobalDragAndDrop();
 
@@ -194,6 +197,26 @@
       }, 1500);
     }
     
+    // Video focus management to prevent native controls from retaining focus
+    function setupVideoFocusManagement() {
+      const video = document.getElementById('video');
+      
+      // Blur video when it gets focus (e.g., from clicking native controls)
+      video.addEventListener('focus', function() {
+        // Small delay to ensure the focus event completes
+        setTimeout(() => {
+          video.blur();
+        }, 0);
+      });
+      
+      // Also handle mouseup to blur after clicking native controls
+      video.addEventListener('mouseup', function() {
+        setTimeout(() => {
+          video.blur();
+        }, 0);
+      });
+    }
+
     // Enhanced keyboard control system
     function setupKeyboardControls() {
       document.addEventListener('keydown', function(e) {
@@ -204,10 +227,20 @@
           return;
         }
         
-        // Avoid firing our shortcuts while typing in form fields
+        // Avoid firing our shortcuts while typing in form fields OR when video is focused
         const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : null;
         const isEditable = tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable);
+        const isVideo = tag === 'video';
+        
         if (isEditable) return;
+        
+        // If video is focused, blur it and prevent default
+        if (isVideo) {
+          video.blur();
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
 
         // Track pressed keys
         pressedKeys.add(e.code);
